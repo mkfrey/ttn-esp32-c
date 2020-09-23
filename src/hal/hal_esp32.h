@@ -23,14 +23,49 @@
 #include <esp_timer.h>
 
 
-enum WaitKind {
+typedef enum {
     CHECK_IO,
     WAIT_FOR_ANY_EVENT,
     WAIT_FOR_TIMER
-};
+} WaitKind;
+
+typedef struct  {
+    spi_host_device_t spi_host;
+    gpio_num_t io_num_nss;
+    gpio_num_t io_num_rx_tx;
+    gpio_num_t io_num_rst;
+    gpio_num_t io_num_dio0;
+    gpio_num_t io_num_dio1;
+    int8_t rssi_cal;
+    spi_device_handle_t spi_handle;
+    spi_transaction_t spi_transaction;
+    SemaphoreHandle_t mutex;
+    esp_timer_handle_t timer;
+    int64_t next_alarm;
+    volatile bool run_background_task;
+} ttn_hal_esp;
+
+void ttn_hal_esp_configure_pins(ttn_hal_esp* ttn_hal, spi_host_device_t spi_host, uint8_t nss, uint8_t rxtx, uint8_t rst, uint8_t dio0, uint8_t dio1);
+void ttn_hal_esp_init(ttn_hal_esp* ttn_hal);
+void ttn_hal_esp_start_lmic_task(ttn_hal_esp* ttn_hal);
+void ttn_hal_esp_stop_lmic_task(ttn_hal_esp* ttn_hal);
+
+void ttn_hal_esp_wake_up();
+void ttn_hal_esp_init_critical_section(ttn_hal_esp* ttn_hal);
+void ttn_hal_esp_enter_critical_section(ttn_hal_esp* ttn_hal);
+void ttn_hal_esp_leave_critical_section(ttn_hal_esp* ttn_hal);
+
+void ttn_hal_esp_spi_write(ttn_hal_esp* ttn_hal, uint8_t cmd, const uint8_t *buf, size_t len);
+void ttn_hal_esp_spi_read(ttn_hal_esp* ttn_hal, uint8_t cmd, uint8_t *buf, size_t len);
+uint8_t ttn_hal_esp_check_timer(ttn_hal_esp* ttn_hal, uint32_t osTime);
+void ttn_hal_esp_sleep(ttn_hal_esp* ttn_hal);
+
+uint32_t ttn_hal_esp_wait_until(ttn_hal_esp* ttn_hal, uint32_t osTime);
 
 
+/** Private mebers. */
 
+/*
 class HAL_ESP32
 {
 public:
@@ -86,9 +121,9 @@ private:
     esp_timer_handle_t timer;
     int64_t nextAlarm;
     volatile bool runBackgroundTask;
-};
+};*/
 
-extern HAL_ESP32 ttn_hal;
+extern ttn_hal_esp ttn_hal;
 
 
 #endif // _hal_esp32_h_

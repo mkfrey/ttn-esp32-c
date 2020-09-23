@@ -16,58 +16,26 @@
 #include "lmic/oslmic.h"
 #include "nvs_flash.h"
 
-
-class TTNProvisioning
-{
-public:
-    TTNProvisioning();
-
-    bool haveKeys();
-    bool decodeKeys(const char *dev_eui, const char *app_eui, const char *app_key);
-    bool fromMAC(const char *app_eui, const char *app_key);
-    bool saveKeys();
-    bool restoreKeys(bool silent);
-
-#if defined(TTN_HAS_AT_COMMANDS)
-    void startTask();
-#endif
-
-private:
-    bool decode(bool incl_dev_eui, const char *dev_eui, const char *app_eui, const char *app_key);
-    bool readNvsValue(nvs_handle handle, const char* key, uint8_t* data, size_t expected_length, bool silent);
-    bool writeNvsValue(nvs_handle handle, const char* key, const uint8_t* data, size_t len);
-
-#if defined(TTN_HAS_AT_COMMANDS)
-    void provisioningTask();
-    void addLineData(int numBytes);
-    void detectLineEnd(int start_at);
-    void processLine();
-#endif
-
-#if defined(TTN_CONFIG_UART)
-    void configUART();
-#endif
-
-    static bool hexStrToBin(const char *hex, uint8_t *buf, int len);
-    static int hexTupleToByte(const char *hex);
-    static int hexDigitToVal(char ch);
-    static void binToHexStr(const uint8_t* buf, int len, char* hex);
-    static char valToHexDigit(int val);
-    static void swapBytes(uint8_t* buf, int len);
-    static bool isAllZeros(const uint8_t* buf, int len);
-
-private:
-    bool have_keys = false;
-
+typedef struct {
+    bool have_keys;
 #if defined(TTN_HAS_AT_COMMANDS)
     QueueHandle_t uart_queue;
     char* line_buf;
     int line_length;
     uint8_t last_line_end_char;
     bool quit_task;
-
-    friend void ttn_provisioning_task_caller(void* pvParameter);
 #endif
-};
+} ttn_provisioning;
+
+void ttn_provisioning_init(ttn_provisioning* provisioning);
+bool ttn_provisioning_have_keys(ttn_provisioning* provisioning);
+bool ttn_provisioning_decode_keys(ttn_provisioning* provisioning, const char *dev_eui, const char *app_eui, const char *app_key);
+bool ttn_provisioning_from_mac(ttn_provisioning* provisioning, const char *app_eui, const char *app_key);
+bool ttn_provisioning_save_keys();
+bool ttn_provisioning_restore_keys(ttn_provisioning* provisioning, bool silent);
+
+#if defined(TTN_HAS_AT_COMMANDS)
+    void ttn_provisioning_start_task(ttn_provisioning* provisioning);
+#endif
 
 #endif

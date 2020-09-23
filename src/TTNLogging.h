@@ -36,19 +36,18 @@
  * 
  * This class is not to be used directly.
  */
-class TTNLogging {
-public:
-    static TTNLogging* initInstance();
 
-    void init();
-    void logEvent(int event, const char* message, uint32_t datum);
+typedef struct {
+    RingbufHandle_t ring_buffer;
+} ttn_log;
 
-private:
-    static void loggingTask(void* param);
-    static void logFatal(const char* file, uint16_t line);
+void ttn_log_init(ttn_log* ttn_log);
+void ttn_log_event(ttn_log* ttn_log, int event, const char* message, uint32_t datum);
 
-    RingbufHandle_t ringBuffer;
-};
+static void ttn_log_task(void* param);
+static void ttn_log_fatal(const char* file, uint16_t line);
+
+extern ttn_log ttn_log_instance;
 
 #endif
 

@@ -23,7 +23,7 @@
 
 #define NUM_RINGBUF_MSG 50
 static const char* const TAG = "lmic";
-static TTNLogging ttnLog;
+static ttn_log ttn_log_instance;
 
 /**
  * @brief Message structure used in ring buffer
@@ -66,37 +66,29 @@ static void printEvtRxStart(TTNLogMessage* log);
 static void printEvtJoinTxComplete(TTNLogMessage* log);
 static void bin2hex(const uint8_t* bin, unsigned len, char* buf, char sep = 0);
 
-
-// Create singleton instance
-TTNLogging* TTNLogging::initInstance()
-{
-    ttnLog.init();
-    return &ttnLog;
-}
-
 // Initialize logging
-void TTNLogging::init()
+void ttn_log_init(ttn_log* ttn_log)
 {
-    ringBuffer = xRingbufferCreate(NUM_RINGBUF_MSG * sizeof(TTNLogMessage), RINGBUF_TYPE_NOSPLIT);
-    if (ringBuffer == nullptr) {
+    ttn_log->ring_buffer = xRingbufferCreate(NUM_RINGBUF_MSG * sizeof(TTNLogMessage), RINGBUF_TYPE_NOSPLIT);
+    if (ttn_log->ring_buffer == NULL) {
         ESP_LOGE(TAG, "Failed to create ring buffer");
         ASSERT(0);
     }
 
-    xTaskCreate(loggingTask, "ttn_log", 1024 * 4, ringBuffer, 4, nullptr);
-    hal_set_failure_handler(logFatal);
+    xTaskCreate(ttn_log_task, "ttn_log", 1024 * 4, ttn_log->ring_buffer, 4, NULL);
+    hal_set_failure_handler(ttn_log_fatal);
 }
 
 // Record a logging event for later output
-void TTNLogging::logEvent(int event, const char* message, uint32_t datum)
+void ttn_log_event(ttn_log* ttn_log, int event, const char* message, uint32_t datum)
 {
-    if (ringBuffer == nullptr)
+    if (ttn_log->ring_buffer == NULL)
         return;
 
     TTNLogMessage log;
     log.message = message;
     log.datum = datum;
-    
+
     // capture state
     log.time = os_getTime();
     log.txend = LMIC.txend;
@@ -113,28 +105,28 @@ void TTNLogging::logEvent(int event, const char* message, uint32_t datum)
     log.txrxFlags = LMIC.txrxFlags;
     log.saveIrqFlags = LMIC.saveIrqFlags;
 
-    xRingbufferSend(ringBuffer, &log, sizeof(log), 0);
+    xRingbufferSend(ttn_log->ring_buffer, &log, sizeof(log), 0);
 }
 
 // record a fatal event (failed assert) for later output
-void TTNLogging::logFatal(const char* file, uint16_t line)
+void ttn_log_fatal(const char* file, uint16_t line)
 {
-    ttnLog.logEvent(-3, file, line);
+    ttn_log_event(&ttn_log_instance, -3, file, line);
 }
 
 // Record an informational message for later output
 // The message must not be freed.
-extern "C" void LMICOS_logEvent(const char *pMessage)
+void LMICOS_logEvent(const char *pMessage)
 {
-    ttnLog.logEvent(-1, pMessage, 0);
+    ttn_log_event(&ttn_log_instance, -1, pMessage, 0);
 
 }
 
 // Record an information message with an integer value for later output
 // The message must not be freed.
-extern "C" void LMICOS_logEventUint32(const char *pMessage, uint32_t datum)
+void LMICOS_logEventUint32(const char *pMessage, uint32_t datum)
 {
-    ttnLog.logEvent(-2, pMessage, datum);
+    ttn_log_event(&ttn_log_instance, -2, pMessage, datum);
 }
 
 
@@ -142,14 +134,14 @@ extern "C" void LMICOS_logEventUint32(const char *pMessage, uint32_t datum)
 // Log output
 
 // Tasks that receiveds the recorded messages, formats and outputs them.
-void TTNLogging::loggingTask(void* param)
+void ttn_log_task(void* param)
 {
     RingbufHandle_t ringBuffer = (RingbufHandle_t)param;
 
     while (true) {
         size_t size;
         TTNLogMessage* log = (TTNLogMessage*) xRingbufferReceive(ringBuffer, &size, portMAX_DELAY);
-        if (log == nullptr)
+        if (log == NULL)
             continue;
 
         printMessage(log);
@@ -360,9 +352,6 @@ void printEvtJoinTxComplete(TTNLogMessage* log)
         log->saveIrqFlags
     );
 }
-
-
-
 
 static const char* HEX_DIGITS = "0123456789ABCDEF";
 

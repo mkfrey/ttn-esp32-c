@@ -1,6 +1,6 @@
-# ttn-esp32
+# ttn-esp32-c
 
-**The Things Network device library for ESP-IDF (ESP32) supporting devices with Semtech SX127x chips**
+**C fork of The Things Network device library for ESP-IDF (ESP32) supporting devices with Semtech SX127x chips**
 
 This ESP32 component provides LoRaWAN communication with [The Things Network](https://www.thethingsnetwork.org/). It supports
 
