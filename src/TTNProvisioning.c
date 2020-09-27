@@ -248,6 +248,8 @@ void ttn_provisioning_process_line(ttn_provisioning* provisioning)
             line_buf[24] = 0;
             line_buf[41] = 0;
             is_ok = ttn_provisioning_decode_keys(provisioning, line_buf + 8, line_buf + 25, line_buf + 42);
+            if (is_ok)
+                is_ok = ttn_provisioning_save_keys();
             reset_needed = is_ok;
         }
     }
@@ -258,6 +260,8 @@ void ttn_provisioning_process_line(ttn_provisioning* provisioning)
         {
             line_buf[25] = 0;
             is_ok = ttn_provisioning_from_mac(provisioning, line_buf + 9, line_buf + 26);
+            if (is_ok)
+                is_ok = ttn_provisioning_save_keys();
             reset_needed = is_ok;
         }
     }
@@ -408,9 +412,6 @@ bool ttn_provisioning_decode(ttn_provisioning* provisioning, bool incl_dev_eui, 
     provisioning->have_keys = !ttn_helper_is_all_zeros(global_dev_eui, sizeof(global_dev_eui))
         && !ttn_helper_is_all_zeros(global_app_eui, sizeof(global_app_eui))
         && !ttn_helper_is_all_zeros(global_app_key, sizeof(global_app_key));
-
-    if (!ttn_provisioning_save_keys())
-        return false;
 
     return true;
 }
